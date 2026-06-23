@@ -17,6 +17,27 @@ const ASPECTS = [
   { key: "16:9", label: "16:9 Yatay", w: 1920, h: 1080 },
 ];
 
+const TRACKS = [
+  { id: "", name: "🔇 Müzik yok" },
+  { id: "zafer", name: "Zafer — coşkulu" },
+  { id: "duygusal", name: "Duygusal — yumuşak" },
+  { id: "sinematik", name: "Sinematik" },
+  { id: "epik", name: "Epik" },
+  { id: "cosku", name: "Coşku — hızlı" },
+  { id: "umut", name: "Umut" },
+  { id: "dramatik", name: "Dramatik" },
+  { id: "mars", name: "Marş" },
+  { id: "huzun", name: "Hüzün" },
+  { id: "enerji", name: "Enerji — tempolu" },
+];
+
+const FONTS = [
+  { id: "sans", name: "Sans (Kalın)" },
+  { id: "serif", name: "Serif (Klasik)" },
+  { id: "modern", name: "Modern" },
+  { id: "noto", name: "Yumuşak" },
+];
+
 const RENDER_URL = process.env.NEXT_PUBLIC_RENDER_URL || "http://localhost:8080";
 
 let uid = 0;
@@ -25,29 +46,35 @@ const nextId = () => `i${uid++}`;
 export default function Editor() {
   const [items, setItems] = useState<Item[]>([]);
   const [aspect, setAspect] = useState(ASPECTS[0]);
-  const [music, setMusic] = useState(true);
+  const [music, setMusic] = useState("zafer");
+  const [font, setFont] = useState("sans");
   const [grade, setGrade] = useState(true);
   const [xfade, setXfade] = useState(1.0);
+  const [defaultDur, setDefaultDur] = useState(3.5);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    setItems((prev) => [
-      ...prev,
-      ...arr.map((f, i) => ({
-        id: nextId(),
-        file: f,
-        preview: URL.createObjectURL(f),
-        caption: "",
-        duration: 3.5,
-        zoom: ((prev.length + i) % 2 === 0 ? "in" : "out") as "in" | "out",
-      })),
-    ]);
-  }, []);
+  const addFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files) return;
+      const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+      setItems((prev) => [
+        ...prev,
+        ...arr.map((f, i) => ({
+          id: nextId(),
+          file: f,
+          preview: URL.createObjectURL(f),
+          caption: "",
+          duration: defaultDur,
+          zoom: ((prev.length + i) % 2 === 0 ? "in" : "out") as "in" | "out",
+        })),
+      ]);
+    },
+    [defaultDur]
+  );
 
   const update = (id: string, patch: Partial<Item>) =>
     setItems((p) => p.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -60,6 +87,18 @@ export default function Editor() {
       [n[i], n[j]] = [n[j], n[i]];
       return n;
     });
+  const dropAt = (target: number) =>
+    setItems((p) => {
+      if (dragIndex === null || dragIndex === target) return p;
+      const n = [...p];
+      const [moved] = n.splice(dragIndex, 1);
+      n.splice(target, 0, moved);
+      return n;
+    });
+  const applyDurationToAll = (d: number) => {
+    setDefaultDur(d);
+    setItems((p) => p.map((it) => ({ ...it, duration: d })));
+  };
 
   const totalDur = items.reduce((s, it) => s + it.duration, 0) - Math.max(0, items.length - 1) * xfade;
 
@@ -78,7 +117,8 @@ export default function Editor() {
           items: items.map((it) => ({ caption: it.caption, duration: it.duration, zoom: it.zoom })),
           width: aspect.w,
           height: aspect.h,
-          music,
+          music: music || false,
+          font,
           grade,
           xfade,
         })
@@ -135,7 +175,7 @@ export default function Editor() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
-              addFiles(e.dataTransfer.files);
+              if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
             }}
             className="mb-4 rounded-xl border-2 border-dashed border-neutral-700 p-6 text-center transition hover:border-amber-500/60"
           >
@@ -156,16 +196,39 @@ export default function Editor() {
             >
               + Resim Ekle
             </button>
-            <p className="mt-2 text-xs text-neutral-500">veya sürükle bırak · her resim bir sahne olur</p>
+            {items.length > 0 && (
+              <button onClick={() => setItems([])} className="ml-2 rounded-lg px-3 py-2 text-sm text-neutral-400 hover:text-red-300">
+                Tümünü temizle
+              </button>
+            )}
+            <p className="mt-2 text-xs text-neutral-500">
+              veya sürükle bırak · her resim bir sahne · <span className="text-neutral-400">⠿ tutup sürükleyerek sıralayabilirsin</span>
+            </p>
           </div>
 
           {items.length === 0 && (
-            <div className="py-16 text-center text-sm text-neutral-600">Henüz resim yok.</div>
+            <div className="py-16 text-center text-sm text-neutral-600">Henüz resim yok. Yukarıdan ekle.</div>
           )}
 
           <div className="space-y-3">
             {items.map((it, i) => (
-              <div key={it.id} className="flex gap-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+              <div
+                key={it.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => dropAt(i)}
+                className={`flex gap-3 rounded-xl border bg-neutral-900 p-3 transition ${
+                  dragIndex === i ? "border-amber-500 opacity-50" : "border-neutral-800"
+                }`}
+              >
+                <span
+                  draggable
+                  onDragStart={() => setDragIndex(i)}
+                  onDragEnd={() => setDragIndex(null)}
+                  title="Sürükle"
+                  className="flex cursor-grab select-none items-center text-lg text-neutral-600 hover:text-neutral-300 active:cursor-grabbing"
+                >
+                  ⠿
+                </span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={it.preview} alt="" className="h-28 w-20 shrink-0 rounded-lg bg-neutral-800 object-cover" />
                 <div className="flex-1 space-y-2">
@@ -217,6 +280,33 @@ export default function Editor() {
         <aside className="space-y-4">
           <div className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
             <h2 className="text-sm font-semibold">Ayarlar</h2>
+
+            <label className="block text-xs text-neutral-400">
+              🎵 Müzik
+              <select
+                value={music}
+                onChange={(e) => setMusic(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-100"
+              >
+                {TRACKS.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-xs text-neutral-400">
+              🔤 Altyazı fontu
+              <select
+                value={font}
+                onChange={(e) => setFont(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-100"
+              >
+                {FONTS.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </label>
+
             <label className="block text-xs text-neutral-400">
               Format
               <select
@@ -229,6 +319,20 @@ export default function Editor() {
                 ))}
               </select>
             </label>
+
+            <label className="block text-xs text-neutral-400">
+              Sahne süresi (tümü): {defaultDur.toFixed(1)} sn
+              <input
+                type="range"
+                min={1.5}
+                max={8}
+                step={0.5}
+                value={defaultDur}
+                onChange={(e) => applyDurationToAll(Number(e.target.value))}
+                className="mt-1 w-full accent-amber-500"
+              />
+            </label>
+
             <label className="block text-xs text-neutral-400">
               Geçiş süresi: {xfade.toFixed(1)} sn
               <input
@@ -241,14 +345,12 @@ export default function Editor() {
                 className="mt-1 w-full accent-amber-500"
               />
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} className="accent-amber-500" />
-              Müzik ekle
-            </label>
+
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={grade} onChange={(e) => setGrade(e.target.checked)} className="accent-amber-500" />
               Sinematik renk
             </label>
+
             <div className="border-t border-neutral-800 pt-2 text-xs text-neutral-500">
               {items.length} sahne · ≈ {Math.max(0, totalDur).toFixed(1)} sn
             </div>
