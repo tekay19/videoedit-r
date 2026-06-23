@@ -38,7 +38,7 @@ const FONTS = [
   { id: "noto", name: "Yumuşak" },
 ];
 
-const RENDER_URL = process.env.NEXT_PUBLIC_RENDER_URL || "http://localhost:8080";
+const RENDER_URL = process.env.NEXT_PUBLIC_RENDER_URL || "https://sem120-reels-render.hf.space";
 
 let uid = 0;
 const nextId = () => `i${uid++}`;
