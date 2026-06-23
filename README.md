@@ -51,6 +51,22 @@ This repo ships a [`render.yaml`](render.yaml) blueprint.
 > The blueprint uses the **free** plan. If renders fail/OOM on long videos, bump the
 > plan to `starter`/`standard` in Render (more RAM/CPU). (Also works on Railway / Fly.)
 
+### Step 1 (alternative) — Backend → Hugging Face Spaces (free, 16 GB RAM)
+More headroom than Render's free 512 MB. The `render-service/` folder is HF-ready
+(its README carries the Spaces config header, port 8080).
+
+1. huggingface.co → **New → Space** → **SDK: Docker** → **Hardware: CPU basic (free)**.
+2. Clone the empty Space and copy the backend into it:
+   ```bash
+   git clone https://huggingface.co/spaces/<user>/reels-render
+   cp -r videoedit-r/render-service/* reels-render/   # node_modules is gitignored
+   cd reels-render && git add -A && git commit -m "deploy" && git push
+   ```
+3. The Space builds the Dockerfile. Your URL: `https://<user>-reels-render.hf.space`.
+4. Use that URL as `NEXT_PUBLIC_RENDER_URL` in Vercel (Step 2).
+
+> Free Spaces sleep after inactivity and wake on the next request (first call is slow).
+
 ### Step 2 — Frontend → Vercel
 1. Import this repo, set **Root Directory = `web`**.
 2. Add an environment variable with the URL from Step 1:

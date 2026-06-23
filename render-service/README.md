@@ -1,7 +1,20 @@
+---
+title: Reels Render
+emoji: 🎬
+colorFrom: yellow
+colorTo: red
+sdk: docker
+app_port: 8080
+pinned: false
+---
+
 # Reels Render Service
 
 ffmpeg + Python video-generation backend. The editor (on Vercel) uploads images here,
 and this service renders the cinematic slideshow and returns it as an MP4.
+
+> The YAML block above is the **Hugging Face Spaces** config (Docker SDK, port 8080).
+> It is ignored everywhere else (Render/Railway/local). See the root README for HF deploy.
 
 ## Endpoint
 
