@@ -38,19 +38,29 @@ NEXT_PUBLIC_RENDER_URL=http://localhost:8080
 
 ## Deploy
 
-### Backend → Railway / Render / Fly (Docker)
-`render-service/Dockerfile` is ready. Connect this repo, set the service root to
-`render-service`, and deploy. You get a public URL, e.g. `https://xxx.up.railway.app`.
+Deploy the **backend first**, get its URL, then deploy the **frontend** with that URL.
 
-### Frontend → Vercel
+### Step 1 — Backend → Render (Docker)
+This repo ships a [`render.yaml`](render.yaml) blueprint.
+
+- **Render Dashboard → New → Blueprint → pick this repo.** Render reads `render.yaml`
+  and builds `render-service/Dockerfile` automatically.
+- Or manually: New → Web Service → Docker, **Root Directory = `render-service`**.
+- When it's live you get a URL like `https://reels-render.onrender.com`. Copy it.
+
+> The blueprint uses the **free** plan. If renders fail/OOM on long videos, bump the
+> plan to `starter`/`standard` in Render (more RAM/CPU). (Also works on Railway / Fly.)
+
+### Step 2 — Frontend → Vercel
 1. Import this repo, set **Root Directory = `web`**.
-2. Add an environment variable:
+2. Add an environment variable with the URL from Step 1:
    ```
-   NEXT_PUBLIC_RENDER_URL = https://your-render-url
+   NEXT_PUBLIC_RENDER_URL = https://reels-render.onrender.com
    ```
 3. Deploy.
 
-> In production, set `ALLOW_ORIGIN` on the backend to your Vercel domain (CORS).
+> After Vercel gives you a domain, set `ALLOW_ORIGIN` on the Render service to that
+> domain (instead of `*`) for tighter CORS.
 
 ## How it works
 

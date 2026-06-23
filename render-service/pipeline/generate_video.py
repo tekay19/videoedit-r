@@ -134,6 +134,12 @@ def main():
     IMAGES = m["images"]; OUT = m["output"]
     USE_GRADE = bool(m.get("grade", True))
     FONTFAM = m.get("font", "sans")
+    FONTSCALE = max(0.6, min(1.7, float(m.get("fontScale", 1.0))))
+    CAPPOS = m.get("captionPos", "bottom")
+    if CAPPOS not in ("bottom", "center", "top"): CAPPOS = "bottom"
+    chex = str(m.get("captionColor", "#ffffff")).lstrip("#")
+    try: CAPCOL = tuple(int(chex[k:k+2], 16) for k in (0, 2, 4)) + (255,)
+    except Exception: CAPCOL = (255, 255, 255, 255)
     mv = m.get("music", True); USE_MUSIC = bool(mv)
     PRESET = mv if (isinstance(mv, str) and mv in MUSIC) else "zafer"
 
@@ -181,24 +187,32 @@ def main():
         starts.append(cum - k*XF); cum += clips[k][1]
     starts.append(total)
 
-    CW, CH = W, int(H*0.24)
-    FT = font(int(W*0.066), FONTFAM); SP, STK = 14, 5
+    SP, STK = 14, 5
+    FT = font(int(W*0.066*FONTSCALE), FONTFAM)
+    CW = W; CH = int(H*(0.20 + 0.07*FONTSCALE))
     grad = Image.new("L",(1,CH))
-    for y in range(CH): grad.putpixel((0,y), int(165*(y/(CH-1))**1.5))
+    for y in range(CH):
+        pp = y/(CH-1)
+        if CAPPOS == "bottom": a = 175*(pp**1.5)
+        elif CAPPOS == "top":  a = 175*((1-pp)**1.5)
+        else:                  a = 175*max(0.0, 1-abs(pp-0.5)*2)**1.2
+        grad.putpixel((0,y), int(max(0,min(255,a))))
     scrim = Image.merge("RGBA",(Image.new("L",(CW,CH),0),)*3+(grad.resize((CW,CH)),))
+    cyf = {"bottom":0.60, "center":0.50, "top":0.42}[CAPPOS]
+    OVY = {"bottom": f"H-h-{int(H*0.055)}", "center": "(H-h)/2", "top": f"{int(H*0.055)}"}[CAPPOS]
     GOLD = (236,184,78,255)
     cap_inputs, cap_filters, idx = [], [], 1
     for i, im in enumerate(IMAGES):
         txt = (im.get("caption") or "").strip()
         if not txt: continue
-        img = scrim.copy(); d = ImageDraw.Draw(img); cy = CH*0.60
+        img = scrim.copy(); d = ImageDraw.Draw(img); cy = CH*cyf
         bb = d.multiline_textbbox((CW/2,cy), txt, font=FT, anchor="mm", align="center", spacing=SP, stroke_width=STK)
         d.rounded_rectangle([CW/2-46, bb[1]-24, CW/2+46, bb[1]-18], radius=3, fill=GOLD)
         sh = Image.new("RGBA",(CW,CH),(0,0,0,0))
         ImageDraw.Draw(sh).multiline_text((CW/2+3,cy+4), txt, font=FT, fill=(0,0,0,150), anchor="mm",
             align="center", spacing=SP, stroke_width=STK, stroke_fill=(0,0,0,150))
         img = Image.alpha_composite(img, sh.filter(ImageFilter.GaussianBlur(6)))
-        ImageDraw.Draw(img).multiline_text((CW/2,cy), txt, font=FT, fill=(255,255,255,255), anchor="mm",
+        ImageDraw.Draw(img).multiline_text((CW/2,cy), txt, font=FT, fill=CAPCOL, anchor="mm",
             align="center", spacing=SP, stroke_width=STK, stroke_fill=(0,0,0,235))
         p = os.path.join(WORK, f"cap_{i}.png"); img.save(p)
         s, e = starts[i]+0.15, starts[i+1]-0.15
@@ -212,7 +226,7 @@ def main():
         links, bl = [], "0:v"
         for k in range(1, idx):
             last = ":shortest=1" if k == idx-1 else ""
-            links.append(f"[{bl}][c{k}]overlay=(W-w)/2:H-h-{int(H*0.06)}{last}[o{k}]"); bl = f"o{k}"
+            links.append(f"[{bl}][c{k}]overlay=(W-w)/2:{OVY}{last}[o{k}]"); bl = f"o{k}"
         run(["ffmpeg","-y","-loglevel","error","-i", base]+cap_inputs+
             ["-filter_complex", ";".join(cap_filters+links), "-map", f"[{bl}]", "-an",
              "-c:v","libx264","-profile:v","high","-crf","18","-preset","medium","-pix_fmt","yuv420p", subbed])

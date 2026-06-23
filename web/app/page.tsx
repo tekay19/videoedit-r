@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Item = {
   id: string;
@@ -55,7 +55,20 @@ export default function Editor() {
   const [error, setError] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [fontScale, setFontScale] = useState(1.0);
+  const [captionColor, setCaptionColor] = useState("#ffffff");
+  const [captionPos, setCaptionPos] = useState("bottom");
+  const [splash, setSplash] = useState<"show" | "hide" | "gone">("show");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setSplash("hide"), 2000);
+    const t2 = setTimeout(() => setSplash("gone"), 2900);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
 
   const addFiles = useCallback(
     (files: FileList | null) => {
@@ -119,6 +132,9 @@ export default function Editor() {
           height: aspect.h,
           music: music || false,
           font,
+          fontScale,
+          captionColor,
+          captionPos,
           grade,
           xfade,
         })
@@ -147,6 +163,24 @@ export default function Editor() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      {splash !== "gone" && (
+        <div
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-black transition-all duration-[900ms] ease-in-out ${
+            splash === "hide" ? "pointer-events-none scale-110 opacity-0 blur-md" : "opacity-100"
+          }`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.jpg" alt="" className="absolute inset-0 h-full w-full object-cover animate-[kenburns_3s_ease-out_forwards]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/55" />
+          <div className="relative mt-auto mb-24 text-center">
+            <h1 className="text-4xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)]">🎬 Reels Stüdyo</h1>
+            <p className="mt-2 text-sm text-amber-300/90">sinematik video editörü</p>
+            <div className="mx-auto mt-5 h-1 w-28 overflow-hidden rounded-full bg-white/20">
+              <div className="h-full origin-left animate-[load_2s_ease-out_forwards] bg-amber-400" />
+            </div>
+          </div>
+        </div>
+      )}
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-800 bg-neutral-950/90 px-6 py-4 backdrop-blur">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -306,6 +340,43 @@ export default function Editor() {
                 ))}
               </select>
             </label>
+
+            <label className="block text-xs text-neutral-400">
+              Altyazı boyutu: {Math.round(fontScale * 100)}%
+              <input
+                type="range"
+                min={0.7}
+                max={1.6}
+                step={0.1}
+                value={fontScale}
+                onChange={(e) => setFontScale(Number(e.target.value))}
+                className="mt-1 w-full accent-amber-500"
+              />
+            </label>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs text-neutral-400">
+                Altyazı rengi
+                <input
+                  type="color"
+                  value={captionColor}
+                  onChange={(e) => setCaptionColor(e.target.value)}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-lg border-0 bg-neutral-800"
+                />
+              </label>
+              <label className="block text-xs text-neutral-400">
+                Konum
+                <select
+                  value={captionPos}
+                  onChange={(e) => setCaptionPos(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-100"
+                >
+                  <option value="bottom">Alt</option>
+                  <option value="center">Orta</option>
+                  <option value="top">Üst</option>
+                </select>
+              </label>
+            </div>
 
             <label className="block text-xs text-neutral-400">
               Format

@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Splash (acilis) animasyonlari */
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.09); }
+}
+@keyframes load {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}

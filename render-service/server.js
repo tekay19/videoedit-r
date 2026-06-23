@@ -54,6 +54,9 @@ app.post("/generate", upload.array("images", 40), async (req, res) => {
       music: meta.music ?? true,
       grade: meta.grade !== false,
       font: meta.font || "sans",
+      fontScale: meta.fontScale != null ? Number(meta.fontScale) : 1.0,
+      captionPos: meta.captionPos || "bottom",
+      captionColor: meta.captionColor || "#ffffff",
     };
     const manPath = path.join(job, "manifest.json");
     await fs.writeFile(manPath, JSON.stringify(manifest));
