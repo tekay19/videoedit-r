@@ -59,6 +59,8 @@ export default function Editor() {
   const [captionColor, setCaptionColor] = useState("#ffffff");
   const [captionPos, setCaptionPos] = useState("bottom");
   const [splash, setSplash] = useState<"show" | "hide" | "gone">("show");
+  const [elapsed, setElapsed] = useState(0);
+  const [warm, setWarm] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -69,6 +71,35 @@ export default function Editor() {
       clearTimeout(t2);
     };
   }, []);
+
+  // Sunucuyu sayfa açılır açılmaz uyandır (HF free Space inaktivitede uyur).
+  // Kullanıcı fotoğraf yüklerken arka planda ısınır; "Üret"e basınca hazır olur.
+  useEffect(() => {
+    let cancelled = false;
+    const ping = async () => {
+      try {
+        const r = await fetch(`${RENDER_URL}/`, { method: "GET" });
+        if (!cancelled && r.ok) setWarm(true);
+      } catch {
+        if (!cancelled) setTimeout(ping, 8000); // uyanana dek tekrar dene
+      }
+    };
+    ping();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Üretim sürerken geçen saniyeyi say (canlı geri bildirim).
+  useEffect(() => {
+    if (!busy) {
+      setElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [busy]);
 
   const addFiles = useCallback(
     (files: FileList | null) => {
@@ -199,9 +230,25 @@ export default function Editor() {
           disabled={busy || items.length === 0}
           className="rounded-lg bg-amber-500 px-5 py-2.5 font-semibold text-black transition hover:bg-amber-400 disabled:opacity-40"
         >
-          {busy ? "Üretiliyor…" : "▶ Videoyu Üret"}
+          {busy ? `Üretiliyor… ${elapsed}s` : "▶ Videoyu Üret"}
         </button>
       </header>
+
+      {busy && (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-3">
+          <div className="mx-auto flex max-w-5xl items-center gap-3 text-sm">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+            <span className="font-medium text-amber-200">
+              {elapsed < 12
+                ? "Sunucu uyandırılıyor… (ilk üretim 1-3 dk sürebilir)"
+                : elapsed < 90
+                ? `Video render ediliyor… ${elapsed}s`
+                : `Neredeyse bitti, sahneler birleştiriliyor… ${elapsed}s`}
+            </span>
+            <span className="ml-auto text-xs text-amber-300/70">Lütfen sekmeyi kapatma</span>
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto grid max-w-5xl gap-6 px-6 py-6 lg:grid-cols-[1fr_320px]">
         <section>
