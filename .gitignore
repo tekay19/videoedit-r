@@ -24,3 +24,7 @@ npm-debug.log*
 
 # stray model/large files
 *.onnx
+
+# python
+__pycache__/
+*.pyc
