@@ -4,12 +4,13 @@ services:
   - type: web
     name: reels-render
     runtime: docker
-    rootDir: render-service
-    dockerfilePath: ./Dockerfile
-    plan: free            # video render agirsa "starter" / "standard" yap (daha cok RAM/CPU)
+    rootDir: render-service     # Dockerfile bu klasorde — Render'a burayi kok goster
+    dockerContext: .            # rootDir'e gore (yani render-service/)
+    dockerfilePath: Dockerfile  # rootDir'e gore
+    plan: free                  # render agirsa "starter"/"standard" yap (daha cok RAM/CPU)
     region: frankfurt
     healthCheckPath: /
     autoDeploy: true
     envVars:
       - key: ALLOW_ORIGIN
-        value: "*"        # prod'da Vercel domainini yaz (or. https://videoedit-r.vercel.app)
+        value: "*"              # prod'da Vercel domainini yaz
